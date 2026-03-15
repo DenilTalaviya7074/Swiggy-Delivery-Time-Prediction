@@ -4,7 +4,7 @@ import yaml
 import logging
 from pathlib import Path
 
-TARGET = "time taken"
+TARGET = "time_taken"
 
 # create logger
 logger = logging.getLogger("data_preparation")
