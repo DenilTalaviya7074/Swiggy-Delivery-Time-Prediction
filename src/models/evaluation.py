@@ -153,8 +153,7 @@ if __name__ == "__main__":
                                     model_output=model.predict(X_train.sample(20,random_state=42)))
         
         # log the final model
-        mlflow.sklearn.log_model(model,"delivery_time_pred_model",signature=model_signature)
-
+        mlflow.sklearn.log_model(model,"delivery_time_pred_model",signature=model_signature,registered_model_name="delivery_time_model")
         # log stacking regressor
         mlflow.log_artifact(root_path / "models" / "stacking_regressor.joblib")
         
