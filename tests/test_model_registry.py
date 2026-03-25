@@ -29,7 +29,7 @@ file_path = os.path.join(BASE_DIR, "run_information.json")
 
 model_name = load_model_information(file_path)["model_name"]
 
-# We test for "Staging" (capital S)
+# We test for "Staging" 
 @pytest.mark.parametrize("model_name, stage", [(model_name, "Staging")])
 def test_load_model_from_registry(model_name, stage):
     client = MlflowClient()
@@ -46,7 +46,7 @@ def test_load_model_from_registry(model_name, stage):
     model_path = f"models:/{model_name}/{stage}"
 
     try:
-        # universal loader
+        # universal loader of
         model = mlflow.pyfunc.load_model(model_path)
     except Exception as e:
         pytest.fail(f"Model loading failed: {str(e)}")
