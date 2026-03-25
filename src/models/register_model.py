@@ -1,76 +1,59 @@
 import mlflow
 import dagshub
-import json
-from pathlib import Path
-from mlflow import MlflowClient
+from mlflow.tracking import MlflowClient
 import logging
 
-
-# create logger
+# ================= LOGGER =================
 logger = logging.getLogger("register_model")
 logger.setLevel(logging.INFO)
 
-# console handler
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 
-# add handler to logger
+formatter = logging.Formatter(
+    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-# create a fomratter
-formatter = logging.Formatter(fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# add formatter to handler
-handler.setFormatter(formatter)
-
-# initialize dagshub
-import dagshub
-import mlflow.client
-dagshub.init(repo_owner='DenilTalaviya7074', repo_name='Swiggy-Delivery-Time-Prediction', mlflow=True)
-
-# set the mlflow tracking server
-mlflow.set_tracking_uri("https://dagshub.com/DenilTalaviya7074/Swiggy-Delivery-Time-Prediction.mlflow")
-
-
-def load_model_information(file_path):
-    with open(file_path) as f:
-        run_info = json.load(f)
-        
-    return run_info
-
-
+# ================= MAIN =================
 if __name__ == "__main__":
-    # root path
-    root_path = Path(__file__).parent.parent.parent
-    
-    # run information file path
-    run_info_path = root_path / "run_information.json"
-    
-    # register the model
-    run_info = load_model_information(run_info_path)
-    
-    # get the run id
-    run_id = run_info["run_id"]
-    model_name = run_info["model_name"]
-    
-    # model to register path
-    model_registry_path = f"runs:/{run_id}/{model_name}"
-    
-    
-    # register the model
-    model_version = mlflow.register_model(model_uri=model_registry_path,
-                                          name=model_name)
-    
-    
-    # get the model version
-    registered_model_version = model_version.version
-    registered_model_name = model_version.name
-    logger.info(f"The latest model version in model registry is {registered_model_version}")
-    
-    # update the stage of the model to staging
-    client = MlflowClient()
-    client.set_registered_model_alias(
-        name=registered_model_name,   
-        alias="staging",   
-        version=registered_model_version)
 
-    logger.info("Model pushed to Staging stage")
+    # 1. Initialize Dagshub and MLflow tracking
+    dagshub_uri = "https://dagshub.com/DenilTalaviya7074/Swiggy-Delivery-Time-Prediction.mlflow"
+    
+    dagshub.init(
+        repo_owner='DenilTalaviya7074',
+        repo_name='Swiggy-Delivery-Time-Prediction',
+        mlflow=True
+    )
+    mlflow.set_tracking_uri(dagshub_uri)
+    
+    # Initialize the client with the exact URI to prevent local path confusion
+    client = MlflowClient(tracking_uri=dagshub_uri)
+
+    # 2. Use the exact name that evaluation.py already registered the model under!
+    model_name = "delivery_time_model" 
+
+    logger.info(f"Looking for registered model: {model_name}")
+
+    # 3. Grab the latest registered version
+    try:
+        # get_latest_versions returns a list, so we grab the first item's version
+        latest_versions = client.get_latest_versions(name=model_name)
+        latest_version = latest_versions[0].version
+        logger.info(f"Found existing version: {latest_version}")
+    except Exception as e:
+        logger.error(f"Could not find model '{model_name}'. Did evaluation.py run successfully?")
+        raise e
+
+    # 4. Transition the found version to Staging
+    logger.info("Transitioning model to Staging...")
+    client.transition_model_version_stage(
+        name=model_name,
+        version=latest_version,
+        stage="Staging",
+        archive_existing_versions=True  # Automatically moves older Staging models to Archived
+    )
+
+    logger.info(f"Successfully transitioned version {latest_version} of '{model_name}' to Staging!")
