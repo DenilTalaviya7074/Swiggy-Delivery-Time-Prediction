@@ -1,45 +1,51 @@
 import mlflow
+from mlflow.tracking import MlflowClient
 import dagshub
-import json
-from mlflow import MlflowClient
+import warnings
 
+# Ignore MLflow deprecation warnings for cleaner logs
+warnings.filterwarnings("ignore", category=FutureWarning, module="mlflow")
+
+# Initialize DagsHub
 dagshub.init(
-    repo_owner='DenilTalaviya7074',
-    repo_name='Swiggy-Delivery-Time-Prediction',
+    repo_owner="DenilTalaviya7074",
+    repo_name="Swiggy-Delivery-Time-Prediction",
     mlflow=True
 )
 
-# set tracking URI
 mlflow.set_tracking_uri(
     "https://dagshub.com/DenilTalaviya7074/Swiggy-Delivery-Time-Prediction.mlflow"
 )
 
-def load_model_information(file_path):
-    with open(file_path) as f:
-        run_info = json.load(f)
-    return run_info
+if __name__ == "__main__":
+    client = MlflowClient()
 
-# get model name
-model_name = load_model_information("run_information.json")["model_name"]
+    #THE FIX: Use the actual registered model name
+    model_name = "delivery_time_model"
+    from_stage = "Staging"
+    to_stage = "Production"
 
-stage = "Staging"
-client = MlflowClient()
-
-# get latest versions
-latest_versions = client.get_latest_versions(name=model_name, stages=[stage])
-
-# safety check
-if not latest_versions:
-    raise Exception("No model found in Staging stage")
-
-latest_model_version_staging = latest_versions[0].version
-
-# promote to production
-client.transition_model_version_stage(
-    name=model_name,
-    version=latest_model_version_staging,
-    stage="Production",
-    archive_existing_versions=True
-)
-
-print("Model promoted to Production successfully!") 
+    try:
+        # 1. Fetch the model currently in Staging
+        latest_versions = client.get_latest_versions(name=model_name, stages=[from_stage])
+        
+        if not latest_versions:
+            raise Exception(f"No model found in {from_stage} stage for '{model_name}'")
+        
+        latest_version = latest_versions[0].version
+        print(f"Found '{model_name}' version {latest_version} in {from_stage}.")
+        
+        # 2. Promote that specific version to Production
+        print(f"Promoting to {to_stage}...")
+        client.transition_model_version_stage(
+            name=model_name,
+            version=latest_version,
+            stage=to_stage,
+            archive_existing_versions=True # Archives any older Production models
+        )
+        
+        print(f"Model '{model_name}' version {latest_version} successfully promoted to {to_stage}!")
+        
+    except Exception as e:
+        print(f"Error during promotion: {str(e)}")
+        raise e
