@@ -14,7 +14,7 @@ data_path = root_path / "data" / "raw" / "swiggy.csv"
 predict_url = "http://127.0.0.1:8000/predict"
 
 # -----------------------------
-# Load sample row
+# Load sample row end point 
 # -----------------------------
 sample_row = pd.read_csv(data_path).dropna().sample(1)
 
