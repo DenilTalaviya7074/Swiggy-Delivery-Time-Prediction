@@ -25,18 +25,20 @@ file_path = os.path.join(BASE_DIR, "run_information.json")
 
 model_name = load_model_information(file_path)["model_name"]
 
-@pytest.mark.parametrize("model_name, stage", [(model_name, "Staging")])
-def test_load_model_from_registry(model_name, stage):
+# CHANGED: We now test for the alias "staging" instead of the stage "Staging"
+@pytest.mark.parametrize("model_name, alias", [(model_name, "staging")])
+def test_load_model_from_registry(model_name, alias):
     client = MlflowClient()
 
-    latest_versions = client.get_latest_versions(name=model_name, stages=[stage])
+    try:
+        # Fetch the exact model version assigned to this alias
+        model_version_info = client.get_model_version_by_alias(name=model_name, alias=alias)
+        latest_version = model_version_info.version
+    except Exception as e:
+        pytest.fail(f"No versions found for model '{model_name}' with alias '{alias}'. Error: {str(e)}")
 
-    # better assertion
-    assert latest_versions, f"No versions found for model {model_name} in {stage}"
-
-    latest_version = latest_versions[0].version
-
-    model_path = f"models:/{model_name}/{stage}"
+    # The modern MLflow URI format for loading by alias is models:/model_name@alias
+    model_path = f"models:/{model_name}@{alias}"
 
     try:
         # universal loader
