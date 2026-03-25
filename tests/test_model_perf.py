@@ -1,12 +1,15 @@
 import pytest
 import mlflow
 import dagshub
-import json
 from pathlib import Path
 from sklearn.pipeline import Pipeline
 import joblib
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
+import warnings
+
+# Ignore MLflow warnings for cleaner logs
+warnings.filterwarnings("ignore", category=FutureWarning, module="mlflow")
 
 # Initialize DagsHub
 dagshub.init(
@@ -20,10 +23,6 @@ mlflow.set_tracking_uri(
 )
 
 # Utility functions
-def load_model_information(file_path):
-    with open(file_path) as f:
-        return json.load(f)
-
 def load_transformer(transformer_path):
     return joblib.load(transformer_path)
 
@@ -33,11 +32,8 @@ def test_model_performance():
     #  root path
     root_path = Path(__file__).parent.parent
 
-    # load model name
-    file_path = root_path / "run_information.json"
-    model_name = load_model_information(file_path)["model_name"]
-
-    # use STAGING stage (since you fixed it)
+    # 🚨 THE FIX: Stop reading from JSON, use the actual registered name
+    model_name = "delivery_time_model"
     stage = "Staging"
     model_path = f"models:/{model_name}/{stage}"
 
