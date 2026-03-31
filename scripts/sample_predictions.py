@@ -11,7 +11,7 @@ data_path = root_path / "data" / "raw" / "swiggy.csv"
 # -----------------------------
 # Prediction endpoint (LOCAL API)
 # -----------------------------
-predict_url = "http://127.0.0.1:8000/predict"
+predict_url = "http://65.2.31.238//predict"
 
 # -----------------------------
 # Load sample row end point
@@ -40,7 +40,7 @@ print("\nStatus code:", response.status_code)
 # Handle response (FIXED)
 # -----------------------------
 if response.status_code == 200:
-    result = response.json()   # ✅ FIX: handle JSON response
+    result = response.json()   # FIX: handle JSON response
     predicted_value = result["predicted_delivery_time"]
 
     print(f"Predicted delivery time: {predicted_value:.2f} min")
