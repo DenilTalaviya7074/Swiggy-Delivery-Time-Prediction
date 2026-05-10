@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DispatchAI | Secure Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0c10; 
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background Blobs - MATCHED EXACTLY TO INDEX.HTML */
+        @keyframes blobMove {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(5vw, -5vh) scale(1.1); }
+            66% { transform: translate(-5vw, 5vh) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        
+        .bg-blobs {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            background: #0b0c10;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px; 
+            overflow: hidden;
+        }
+        
+        .blob-1 { position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%); animation: blobMove 25s infinite alternate ease-in-out; }
+        .blob-2 { position: absolute; bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%); animation: blobMove 30s infinite alternate-reverse ease-in-out; }
+        .blob-3 { position: absolute; top: 40%; left: 30%; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%); animation: blobMove 35s infinite alternate ease-in-out; }
+
+        /* Premium Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(30, 20, 60, 0.25); 
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15); 
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(139, 92, 246, 0.05); 
+        }
+        
+        .glass-input {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(0,0,0,0.5); 
+            border-left: 1px solid rgba(0,0,0,0.3);
+            color: #f8fafc;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(30, 20, 60, 0.4);
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 15px rgba(139, 92, 246, 0.3); 
+            outline: none;
+        }
+
+        .glass-btn {
+            background: rgba(139, 92, 246, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-top: 1px solid rgba(255,255,255,0.3); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s ease; }
+        .glass-btn:hover::before { left: 100%; }
+        .glass-btn:hover:not(:disabled) {
+            background: rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.6), inset 0 0 10px rgba(255,255,255,0.2);
+            border-color: rgba(167, 139, 250, 0.8);
+        }
+
+        .sso-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; }
+        .sso-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+
+        /* Animations */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .delay-100 { animation-delay: 0.1s; } .delay-200 { animation-delay: 0.2s; }
+        
+        /* Checkbox */
+        input[type="checkbox"] {
+            appearance: none; background-color: rgba(0,0,0,0.5); margin: 0; font: inherit; color: currentColor;
+            width: 1.15em; height: 1.15em; border: 1px solid rgba(255,255,255,0.2); border-radius: 0.25em; display: grid; place-content: center;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        input[type="checkbox"]::before {
+            content: ""; width: 0.65em; height: 0.65em; transform: scale(0); transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #8b5cf6; background-color: #8b5cf6; transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        input[type="checkbox"]:checked::before { transform: scale(1); }
+        input[type="checkbox"]:checked { border-color: #8b5cf6; }
+
+        /* Shake Animation for Errors */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .error-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        
+        /* Error Input State */
+        .input-error {
+            border-color: rgba(239, 68, 68, 0.8) !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none; }
+        .toast {
+            background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; padding: 1rem 1.25rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; opacity: 0;
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast-error { border-left: 4px solid #ef4444; }
+        .toast-success { border-left: 4px solid #10b981; }
+
+    </style>
+</head>
+<body class="min-h-screen text-slate-200 selection:bg-violet-500 selection:text-white">
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="bg-blobs">
+        <div class="blob-1"></div>
+        <div class="blob-2"></div>
+        <div class="blob-3"></div>
+    </div>
+    
+    <canvas id="particleCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+    <div class="flex w-full min-h-screen relative z-10">
+        
+        <div class="w-full lg:w-1/2 flex flex-col justify-between p-8 md:p-12 bg-black/40 backdrop-blur-xl border-r border-white/5 relative z-20 shadow-2xl min-h-screen">
+            
+            <div class="lg:hidden flex items-center gap-3 mb-8">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)] border border-white/20">
+                    <i class="fa-solid fa-bolt text-white text-sm drop-shadow-md"></i>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight">Dispatch<span class="text-violet-400">AI</span></h1>
+            </div>
+
+            <div class="flex-1 flex flex-col justify-center max-w-md w-full mx-auto reveal-up py-8">
+                
+                <div class="mb-8" id="authHeader">
+                    <h2 class="text-3xl font-bold text-white tracking-tight mb-2">Welcome back</h2>
+                    <p class="text-sm text-slate-400">Sign in to access DispatchAI's neural route optimizer and ETA dashboard.</p>
+                </div>
+
+                <form id="loginForm" class="space-y-5">
+                    <div class="space-y-1.5">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Dispatcher ID / Email</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-envelope"></i>
+                            </div>
+                            <input type="email" id="email" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm" placeholder="operator@dispatch.ai" required>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center pr-1">
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Access Token</label>
+                            <a href="#" class="text-[11px] font-medium text-violet-400 hover:text-violet-300 transition-colors">Forgot password?</a>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <input type="password" id="password" class="glass-input w-full pl-11 pr-11 p-3.5 rounded-xl text-sm tracking-widest" placeholder="••••••••" required>
+                            <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center pt-2">
+                        <input type="checkbox" id="remember" class="mr-3">
+                        <label for="remember" class="text-xs text-slate-400 cursor-pointer select-none">Remember this device for 30 days</label>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="glass-btn w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl mt-4 flex justify-center items-center gap-3">
+                        <span id="btnText" class="tracking-wide">Authenticate Session</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket text-sm" id="btnIcon"></i>
+                    </button>
+                </form>
+
+                <div class="mt-8 transition-opacity duration-300" id="ssoSection">
+                    <div class="relative flex items-center py-5">
+                        <div class="flex-grow border-t border-white/10"></div>
+                        <span class="flex-shrink-0 mx-4 text-slate-500 text-xs font-medium uppercase tracking-widest">Or continue with</span>
+                        <div class="flex-grow border-t border-white/10"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button type="button" class="sso-btn flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-300">
+                            <i class="fa-brands fa-google text-white"></i> Google
+                        </button>
+                        <button type="button" class="sso-btn flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-300">
+                            <i class="fa-brands fa-github text-white"></i> GitHub
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mt-auto text-center md:text-left text-xs text-slate-600 flex flex-col md:flex-row justify-between items-center reveal-up delay-200">
+                <p>&copy; 2026 DispatchAI Technologies</p>
+                <div class="flex gap-4 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-slate-400 transition">Privacy</a>
+                    <a href="#" class="hover:text-slate-400 transition">Terms</a>
+                    <a href="#" class="hover:text-slate-400 transition">Contact Admin</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden lg:flex w-1/2 flex-col justify-between p-12 relative z-10 min-h-screen">
+            <div class="flex justify-end items-center reveal-up">
+                <div class="flex items-center gap-4">
+                    <h1 class="text-2xl font-bold tracking-tight">Dispatch<span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">AI</span></h1>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center shadow-[0_0_25px_rgba(139,92,246,0.4)] border border-white/20">
+                        <i class="fa-solid fa-bolt text-white text-xl drop-shadow-md"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full max-w-lg mx-auto py-8">
+                <div class="glass-panel rounded-3xl p-10 reveal-up delay-100 relative overflow-hidden">
+                    <div class="absolute -top-20 -right-20 w-64 h-64 bg-violet-500/15 rounded-full blur-[40px]"></div>
+                    <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-500/15 rounded-full blur-[40px]"></div>
+                    
+                    <h2 class="text-3xl font-bold text-white mb-6 leading-tight relative z-10">
+                        The Future of <br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">Route Optimization.</span>
+                    </h2>
+                    
+                    <div class="space-y-6 relative z-10">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-violet-400 shrink-0">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-white mb-1">Machine Learning Engine</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">Predictive ETAs utilizing 11 dynamic parameters including real-time weather and driver performance.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-violet-400 shrink-0">
+                                <i class="fa-solid fa-car-side"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-white mb-1">Smart Traffic Integration</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">Automatically adjusts routing based on live city density constraints and festival bottlenecks.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-violet-400 shrink-0">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-white mb-1">Fleet Analytics</h4>
+                                <p class="text-xs text-slate-400 leading-relaxed">Comprehensive tracking of multiple deliveries and vehicle conditions for maximum efficiency.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full max-w-lg mx-auto mb-8">
+                <div class="flex flex-col xl:flex-row justify-between items-end gap-4 reveal-up delay-200">
+                    <div class="glass-panel px-6 py-4 rounded-2xl flex items-center gap-4 w-full xl:w-auto">
+                        <div class="text-3xl text-violet-500"><i class="fa-solid fa-route"></i></div>
+                        <div>
+                            <div class="text-2xl font-black text-white" id="routeCounter">14,205</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Routes Optimized Today</div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/5 shadow-lg w-fit">
+                        <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                        </span>
+                        <span class="text-xs font-semibold text-slate-300">System Core Online &middot; v2.1.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* Particles Animation for Background */
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedY = (Math.random() * 0.5) + 0.1;
+                this.speedX = (Math.random() * 0.4) - 0.2;
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.y -= this.speedY;
+                this.x += this.speedX;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(139, 92, 246, ${this.opacity})`;
+                ctx.fill();
+            }
+        }
+        for(let i=0; i<40; i++) particles.push(new Particle());
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateCanvas);
+        }
+        animateCanvas();
+
+        /* Fake Route Counter Animation */
+        function incrementCounter() {
+            const counterEl = document.getElementById('routeCounter');
+            let currentVal = parseInt(counterEl.innerText.replace(/,/g, ''));
+            setTimeout(() => {
+                currentVal += Math.floor(Math.random() * 3) + 1;
+                counterEl.innerText = currentVal.toLocaleString();
+                incrementCounter();
+            }, Math.random() * 4000 + 2000);
+        }
+        incrementCounter();
+
+        /* --- NEW FUNCTIONALITY SCRIPTS --- */
+
+        /* Toast Notification System */
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let icon = type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500"></i>' : '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+            let borderClass = type === 'error' ? 'toast-error' : 'toast-success';
+            
+            toast.className = `toast ${borderClass}`;
+            toast.innerHTML = `${icon} <span class="ml-1">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400); 
+            }, 4000);
+        }
+
+        /* Password Visibility Toggle */
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePassword.innerHTML = type === 'password' ? '<i class="fa-solid fa-eye"></i>' : '<i class="fa-solid fa-eye-slash text-violet-400"></i>';
+        });
+
+        /* Form Submission Logic (Single Step) */
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email');
+            const pass = document.getElementById('password');
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            const formEl = document.getElementById('loginForm');
+            
+            // Reset error states
+            email.classList.remove('input-error');
+            pass.classList.remove('input-error');
+            formEl.classList.remove('error-shake');
+
+            // Loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-wait');
+            btnText.innerText = "Verifying Credentials...";
+            btnIcon.className = "fa-solid fa-circle-notch fa-spin drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]";
+
+            setTimeout(() => {
+                // Mock Error Validation
+                if (pass.value === 'wrongpassword') {
+                    showToast("Authentication failed: Invalid credentials.", "error");
+                    
+                    pass.classList.add('input-error');
+                    
+                    // Trigger shake animation
+                    formEl.classList.remove('error-shake');
+                    void formEl.offsetWidth; 
+                    formEl.classList.add('error-shake');
+
+                    // Reset button
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-80', 'cursor-wait');
+                    btnText.innerText = "Authenticate Session";
+                    btnIcon.className = "fa-solid fa-arrow-right-to-bracket";
+                    return;
+                }
+
+                // If Valid -> Login Success
+                btnText.innerText = "Access Granted";
+                btnIcon.className = "fa-solid fa-check text-sm";
+                btn.classList.remove('from-violet-600', 'to-indigo-600');
+                btn.classList.add('from-emerald-500', 'to-emerald-600', 'border-emerald-500', 'shadow-[0_10px_25px_-5px_rgba(16,185,129,0.6)]');
+                
+                showToast("Secure connection established. Redirecting...", "success");
+                
+                // REDIRECT TO DASHBOARD PAGE
+                setTimeout(() => {
+                    window.location.href = "/dashboard"; 
+                }, 1200);
+
+            }, 1200); 
+        });
+
+    </script>
+</body>
+</html>

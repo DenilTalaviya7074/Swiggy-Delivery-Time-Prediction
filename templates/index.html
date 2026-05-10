@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DispatchAI | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0b0c10; color: #f8fafc; overflow-x: hidden; }
+        
+        .bg-blobs { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 30px 30px; overflow: hidden; }
+        .blob-1 { position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%); animation: blobMove 25s infinite alternate ease-in-out; }
+        .blob-2 { position: absolute; bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%); animation: blobMove 30s infinite alternate-reverse ease-in-out; }
+        @keyframes blobMove { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(5vw, 5vh) scale(1.05); } 100% { transform: translate(0, 0) scale(1); } }
+
+        .glass-panel { background: rgba(30, 20, 60, 0.25); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(139, 92, 246, 0.05); transition: transform 0.3s ease; }
+        .glass-sidebar { background: rgba(10, 10, 15, 0.6); backdrop-filter: blur(30px); border-right: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        .glass-input { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(0,0,0,0.5); color: #f8fafc; transition: all 0.3s ease; }
+        .glass-input:focus { background: rgba(30, 20, 60, 0.4); border-color: rgba(139, 92, 246, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 15px rgba(139, 92, 246, 0.3); outline: none; }
+        
+        /* Dropdown Styling */
+        .glass-input option, .glass-input optgroup { background: #111111; color: #f8fafc; }
+        .glass-input optgroup { font-weight: 700; color: #a78bfa; padding: 5px 0; }
+        
+        .glass-btn { background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); border-top: 1px solid rgba(255,255,255,0.2); transition: all 0.3s ease; }
+        .glass-btn:hover { background: rgba(139, 92, 246, 0.3); transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.6); border-color: rgba(167, 139, 250, 0.8); }
+        
+        input[type=range] { -webkit-appearance: none; background: rgba(0,0,0,0.6); height: 4px; border-radius: 2px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.8); }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #8b5cf6; border: 2px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 15px rgba(139, 92, 246, 0.8); transition: transform 0.2s; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden selection:bg-violet-500 selection:text-white">
+
+    <div class="bg-blobs"><div class="blob-1"></div><div class="blob-2"></div></div>
+    <canvas id="particleCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+    <aside class="w-72 glass-sidebar flex flex-col h-full z-20 shadow-2xl relative shrink-0 hidden md:flex">
+        <div class="p-6 border-b border-white/5 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)] border border-white/20">
+                <i class="fa-solid fa-bolt text-white"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight">Dispatch<span class="text-violet-400">AI</span></h1>
+        </div>
+        
+        <div class="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+            <div>
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Live Fleet Status</h3>
+                <div class="bg-black/40 border border-white/5 rounded-xl p-4 flex items-center gap-4 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-motorcycle"></i></div>
+                    <div><div class="text-lg font-bold text-white">248</div><div class="text-[10px] text-slate-400 uppercase">Active Drivers</div></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">System Health</h3>
+                <div class="bg-black/40 border border-white/5 rounded-xl p-4 space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400">ML Engine API</span>
+                        <span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 border-t border-white/5">
+            <button onclick="window.location.href='/login'" class="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium text-slate-300 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Disconnect
+            </button>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col relative z-10 h-full overflow-hidden text-white">
+        <header class="glass-panel mx-6 mt-4 mb-2 rounded-2xl px-6 py-4 flex justify-between items-center z-30 shrink-0">
+            <h2 class="text-lg font-semibold text-white/90">Route Optimization Console</h2>
+            
+            <div class="hidden lg:flex items-center gap-6 px-6 py-1.5 bg-white/5 rounded-full border border-white/5 shadow-inner">
+                <div class="flex items-center gap-2.5">
+                    <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Neural Engine Syncing</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
+                <div class="w-7 h-7 bg-indigo-500/30 text-indigo-200 rounded-full flex items-center justify-center font-bold text-xs border border-indigo-500/30">D1</div>
+                <span class="text-sm font-medium">Dispatcher_01</span>
+            </div>
+        </header>
+
+        <main class="p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col xl:flex-row gap-6 relative">
+            
+            <div class="glass-panel rounded-3xl p-8 flex-1 max-w-4xl flex flex-col mb-8 h-fit shadow-2xl">
+                <div class="flex justify-between items-end mb-6 border-b border-white/5 pb-4">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white/90">Logistics Parameters</h3>
+                        <p class="text-sm text-slate-400/80 mt-1">Configure inputs to generate neural route optimization.</p>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Live Weather & Traffic Sync Active</span>
+                    </div>
+                </div>
+                
+                <form id="predictionForm" class="flex-1 flex flex-col justify-between">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        
+                        <div class="col-span-1 md:col-span-2 space-y-1.5 mb-2">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Operating Region (India)</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <select id="operatingCity" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <optgroup label="Delhi">
+                                        <option value="Delhi">New Delhi</option>
+                                    </optgroup>
+                                    <optgroup label="Maharashtra">
+                                        <option value="Mumbai">Mumbai</option>
+                                        <option value="Pune">Pune</option>
+                                    </optgroup>
+                                    <optgroup label="Karnataka">
+                                        <option value="Bangalore">Bangalore (Bengaluru)</option>
+                                    </optgroup>
+                                    <optgroup label="Gujarat">
+                                        <option value="Ahmedabad" selected>Ahmedabad</option>
+                                        <option value="Surat">Surat</option>
+                                        <option value="Vadodara">Vadodara</option>
+                                        <option value="Rajkot">Rajkot</option>
+                                        <option value="Gandhinagar">Gandhinagar</option>
+                                    </optgroup>
+                                    <optgroup label="Telangana">
+                                        <option value="Hyderabad">Hyderabad</option>
+                                    </optgroup>
+                                    <optgroup label="Tamil Nadu">
+                                        <option value="Chennai">Chennai</option>
+                                    </optgroup>
+                                    <optgroup label="West Bengal">
+                                        <option value="Kolkata">Kolkata</option>
+                                    </optgroup>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Driver Age</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                                <input type="number" id="age" value="30" min="18" max="65" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm" required>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Driver Rating</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-star absolute left-4 top-1/2 -translate-y-1/2 text-amber-500/80"></i>
+                                <input type="number" id="rating" value="4.5" step="0.1" min="1.0" max="5.0" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm" required>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Order Type</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-burger absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400/80"></i>
+                                <select id="orderType" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="Snack">Snack</option><option value="Drinks">Drinks</option><option value="Meal">Meal</option><option value="Buffet">Buffet</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Multiple Deliveries</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-layer-group absolute left-4 top-1/2 -translate-y-1/2 text-violet-400/80"></i>
+                                <select id="deliveries" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Vehicle Type</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-motorcycle absolute left-4 top-1/2 -translate-y-1/2 text-slate-300/80"></i>
+                                <select id="vehicleType" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="motorcycle">Motorcycle</option><option value="scooter">Scooter</option><option value="electric_scooter">Electric Scooter</option><option value="bicycle">Bicycle</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Condition (0-3)</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-wrench absolute left-4 top-1/2 -translate-y-1/2 text-slate-300/80"></i>
+                                <select id="vehicleCond" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="3">3 (Excellent)</option><option value="2">2 (Good)</option><option value="1">1 (Fair)</option><option value="0">0 (Poor)</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">City Type</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-city absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400/80"></i>
+                                <select id="city" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="Metropolitan">Metropolitan</option><option value="Urban">Urban</option><option value="Semi-Urban">Semi-Urban</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-400/80 uppercase tracking-widest pl-1">Festival</label>
+                            <div class="relative">
+                                <i class="fa-solid fa-gift absolute left-4 top-1/2 -translate-y-1/2 text-pink-400/80"></i>
+                                <select id="festival" class="glass-input w-full pl-11 p-3.5 rounded-xl text-sm appearance-none cursor-pointer">
+                                    <option value="No">No</option><option value="Yes">Yes</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500"></i>
+                            </div>
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2 mt-2 bg-black/40 p-6 rounded-2xl border border-white/5 shadow-inner">
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="text-[11px] font-bold text-slate-400/80 uppercase tracking-widest">Routing Distance</label>
+                                <div class="bg-violet-500/10 text-violet-300 px-4 py-1.5 rounded-full text-sm font-bold border border-violet-500/20 shadow-[0_0_15px_rgba(139,92,246,0.2)]">
+                                    <span id="distLabel">5.0</span> km
+                                </div>
+                            </div>
+                            <input type="range" id="distance" min="1" max="25" step="0.5" value="5" class="w-full" oninput="document.getElementById('distLabel').innerText = this.value">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="glass-btn w-full text-white font-bold py-4 rounded-2xl flex justify-center items-center gap-3 text-lg">
+                        <span class="tracking-wide">Calculate Optimal ETA</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="hidden xl:flex w-[340px] flex-col gap-6 shrink-0 mb-8 h-fit sticky top-0">
+                <div class="glass-panel rounded-3xl p-6">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Recent Dispatches</h4>
+                    <div id="dispatchHistoryList" class="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        <div class="text-center py-10 opacity-30">
+                            <i class="fa-solid fa-clock-rotate-left text-3xl mb-2"></i>
+                            <p class="text-[10px] uppercase font-bold tracking-widest">No history found</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 relative overflow-hidden flex-1">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-5">Fleet Efficiency</h4>
+                    <div class="space-y-5">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1.5"><span class="text-slate-300 font-medium">On-Time Delivery Rate</span><span class="text-emerald-400 font-black">96.2%</span></div>
+                            <div class="h-2 w-full bg-black/60 rounded-full overflow-hidden shadow-inner"><div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 w-[96.2%] rounded-full shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        class Particle {
+            constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 2 + 0.5; this.speedY = (Math.random() * 0.5) + 0.1; this.speedX = (Math.random() * 0.4) - 0.2; this.opacity = Math.random() * 0.5 + 0.1; }
+            update() { this.y -= this.speedY; this.x += this.speedX; if (this.y < 0) this.y = canvas.height; if (this.x < 0 || this.x > canvas.width) this.speedX *= -1; }
+            draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = `rgba(139, 92, 246, ${this.opacity})`; ctx.fill(); }
+        }
+        for(let i=0; i<50; i++) particles.push(new Particle());
+        function animateCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animateCanvas); }
+        animateCanvas();
+
+        function loadPredictionHistory() {
+            const container = document.getElementById('dispatchHistoryList');
+            const history = JSON.parse(localStorage.getItem('etaHistory') || '[]');
+            if (history.length === 0) return;
+            container.innerHTML = history.map(item => `
+                <div class="flex items-center gap-3 border-b border-white/5 pb-4 last:border-0">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs shrink-0"><i class="fa-solid fa-check"></i></div>
+                    <div class="flex-1 text-white"><p class="text-xs font-bold mb-0.5">Order #${item.orderId}</p><p class="text-[9px] text-slate-400 uppercase tracking-wider">${item.vehicle} • ${item.distance} km</p></div>
+                    <div class="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">${item.eta}m</div>
+                </div>
+            `).join('');
+        }
+        document.addEventListener('DOMContentLoaded', loadPredictionHistory);
+
+        document.getElementById("predictionForm").addEventListener("submit", function(event) {
+            event.preventDefault(); 
+            
+            const payload = {
+                "Operating_City": document.getElementById("operatingCity").value,
+                "Delivery_person_Age": parseFloat(document.getElementById("age").value),
+                "Delivery_person_Ratings": parseFloat(document.getElementById("rating").value),
+                "Weatherconditions": "conditions Sunny", 
+                "Road_traffic_density": "Low ", 
+                "Type_of_order": document.getElementById("orderType").value.trim() + " ",
+                "Type_of_vehicle": document.getElementById("vehicleType").value.trim() + " ",
+                "Vehicle_condition": parseInt(document.getElementById("vehicleCond").value, 10),
+                "multiple_deliveries": parseFloat(document.getElementById("deliveries").value),
+                "Festival": document.getElementById("festival").value.trim() + " ",
+                "City": document.getElementById("city").value.trim() + " ",
+                "Distance": parseFloat(document.getElementById("distance").value)
+            };
+
+            localStorage.setItem('dispatchPayload', JSON.stringify(payload));
+            window.location.href = "/result";
+        });
+    </script>
+</body>
+</html>

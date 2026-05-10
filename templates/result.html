@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DispatchAI | Live Route</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0b0c10; color: #f8fafc; }
+        .bg-blobs { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 30px 30px; }
+        .blob-1 { position: absolute; top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%); }
+        .blob-2 { position: absolute; bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%); }
+        
+        .glass-panel { background: rgba(30, 20, 60, 0.25); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6); }
+        .glass-btn { background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); transition: all 0.3s ease; }
+        .glass-btn:hover { background: rgba(139, 92, 246, 0.4); transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.6); }
+        
+        #map { z-index: 1; border-radius: 24px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.5); }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden selection:bg-violet-500 selection:text-white">
+
+    <div class="bg-blobs"><div class="blob-1"></div><div class="blob-2"></div></div>
+    <canvas id="particleCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+    <header class="glass-panel mx-6 mt-4 mb-2 rounded-2xl px-6 py-4 flex justify-between items-center z-30 shrink-0">
+        <button onclick="window.location.href='/dashboard'" class="flex items-center gap-2 text-slate-400 hover:text-white transition bg-black/30 px-4 py-2 rounded-xl border border-white/5">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <h2 class="text-lg font-semibold text-white/90 tracking-wide">Live Optimization Output</h2>
+        <div class="w-32"></div> 
+    </header>
+
+    <main class="p-6 flex-1 overflow-y-auto custom-scrollbar z-10 w-full relative">
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <div id="map" class="glass-panel relative overflow-hidden group h-[400px] border border-violet-500/20 shadow-[0_0_30px_rgba(0,0,0,0.8)] shrink-0">
+                    <div id="mapOverlay" class="absolute inset-0 bg-black/80 backdrop-blur-md z-[400] flex flex-col items-center justify-center text-slate-400/80 transition-opacity duration-500">
+                        <i class="fa-solid fa-satellite-dish text-5xl mb-4 text-violet-500 fa-pulse"></i>
+                        <span class="text-sm font-semibold tracking-widest uppercase">Initializing Geospatial Render</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 flex flex-col md:flex-row gap-6 flex-1 shrink-0">
+                    
+                    <div class="flex-1 md:border-r border-white/5 md:pr-6 flex flex-col">
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Assigned Unit</h4>
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-black border border-slate-600 flex items-center justify-center text-xl overflow-hidden relative shadow-inner shrink-0">
+                                <i class="fa-solid fa-user-astronaut text-slate-400"></i>
+                            </div>
+                            <div>
+                                <h5 class="text-sm font-bold text-white tracking-wide">Unit Alpha-7</h5>
+                                <div class="flex items-center gap-1 text-[10px] text-amber-400 mt-1" id="starContainer">
+                                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                                    <span class="text-slate-400 ml-1" id="driverRatingVal">(4.8)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 border-t border-white/5 pt-5 space-y-4 flex-1">
+                            <div>
+                                <div class="text-[10px] text-slate-500 uppercase mb-1">Vehicle Match</div>
+                                <div class="text-xs font-medium text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-motorcycle text-slate-400"></i> <span id="vehTypeDisplay" class="capitalize">Motorcycle</span>
+                                    <span class="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300 font-mono tracking-wider">GJ-01-XX-9090</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-500 uppercase mb-1">Current Manifest</div>
+                                <div class="text-xs font-medium text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-box text-slate-400"></i> <span id="manifestDisplay">1x Order</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex justify-between items-center mt-2">
+                                <div>
+                                    <div class="text-[10px] text-slate-500 uppercase mb-0.5">Shift Uptime</div>
+                                    <div class="text-xs font-bold text-white">04h 12m</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[10px] text-slate-500 uppercase mb-0.5">Success Rate</div>
+                                    <div class="text-xs font-bold text-emerald-400">98.4%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-[1.2] md:pl-2">
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Live Itinerary</h4>
+                        <div class="relative border-l border-white/10 ml-3 space-y-5">
+                            <div class="relative pl-6"><div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div><p class="text-xs font-bold text-white">Route Calculated</p></div>
+                            <div class="relative pl-6 opacity-50" id="status2block"><div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-500" id="status2dot"></div><p class="text-xs font-bold text-white">Awaiting Dispatch</p></div>
+                        </div>
+
+                        <div class="mt-8 border-t border-white/5 pt-6">
+                            <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Telemetry & Comms</h4>
+                            <div class="grid grid-cols-3 gap-3 mb-4">
+                                <div class="bg-black/40 rounded-xl p-3 border border-white/5 text-center shadow-inner transition-colors duration-300" id="speedCard">
+                                    <i class="fa-solid fa-gauge-high text-violet-400 mb-1.5 text-sm"></i>
+                                    <div class="text-[10px] text-slate-500 uppercase mb-0.5">Speed</div>
+                                    <div class="text-xs font-bold text-white" id="liveSpeed">0 km/h</div>
+                                </div>
+                                <div class="bg-black/40 rounded-xl p-3 border border-white/5 text-center shadow-inner">
+                                    <i class="fa-solid fa-bolt text-amber-400 mb-1.5 text-sm"></i>
+                                    <div class="text-[10px] text-slate-500 uppercase mb-0.5">Energy</div>
+                                    <div class="text-xs font-bold text-white">84%</div>
+                                </div>
+                                <div class="bg-black/40 rounded-xl p-3 border border-white/5 text-center shadow-inner">
+                                    <i class="fa-solid fa-satellite text-emerald-400 mb-1.5 text-sm"></i>
+                                    <div class="text-[10px] text-slate-500 uppercase mb-0.5">GPS</div>
+                                    <div class="text-xs font-bold text-white">Active</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button class="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-2.5 text-xs font-bold text-slate-300 hover:text-white transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-phone text-slate-400"></i> Call Unit
+                                </button>
+                                <button class="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-2.5 text-xs font-bold text-slate-300 hover:text-white transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-comment-dots text-slate-400"></i> Secure Chat
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-6">
+                <div class="glass-panel rounded-3xl p-8 text-center relative overflow-hidden flex flex-col justify-center items-center flex-1 min-h-[280px]">
+                    <div class="absolute -top-12 -right-12 w-40 h-40 bg-violet-500/20 rounded-full blur-[30px]"></div>
+                    <h3 class="text-slate-400/80 font-bold uppercase tracking-widest text-xs mb-4 relative z-10 flex items-center gap-2" id="statusText">
+                        <i class="fa-solid fa-circle-notch fa-spin text-violet-400" id="statusIcon"></i> Calculating ETA...
+                    </h3>
+                    <div class="flex items-baseline justify-center gap-2 relative z-10 my-2">
+                        <span id="etaResult" class="text-7xl xl:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 filter opacity-50">--</span>
+                        <span class="text-2xl font-bold text-violet-400 drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]">min</span>
+                    </div>
+                    <p class="text-xs mt-4 text-slate-500/80 relative z-10" id="etaSubtitle">Awaiting Engine Response</p>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-6 relative overflow-hidden shrink-0">
+                    <div>
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Route Summary</h4>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-white/5 pb-3"><span class="text-sm text-slate-400"><i class="fa-solid fa-route text-violet-400"></i> Distance</span><span class="text-sm font-bold text-white" id="sumDist">-- km</span></div>
+                            <div class="flex justify-between items-center border-b border-white/5 pb-3"><span class="text-sm text-slate-400"><i class="fa-solid fa-car-side text-rose-400"></i> Traffic</span><span class="text-sm font-bold text-white" id="sumTraffic">--</span></div>
+                            <div class="flex justify-between items-center"><span class="text-sm text-slate-400"><i class="fa-solid fa-cloud-sun text-sky-400"></i> Weather</span><span class="text-sm font-bold text-white capitalize" id="sumWeather">--</span></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 border-t border-white/10 pt-6">
+                        <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Unit Economics (Est.)</h4>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-black/30 p-3 rounded-xl border border-white/5">
+                                <div class="text-[10px] text-slate-500 uppercase mb-1">Gross Rev</div>
+                                <div class="text-sm font-bold text-white" id="finRev">₹0.00</div>
+                            </div>
+                            <div class="bg-black/30 p-3 rounded-xl border border-white/5">
+                                <div class="text-[10px] text-slate-500 uppercase mb-1">Trip Cost</div>
+                                <div class="text-sm font-bold text-rose-400" id="finCost">₹0.00</div>
+                            </div>
+                        </div>
+                        <div class="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex justify-between items-center shadow-inner">
+                            <div>
+                                <div class="text-[10px] text-emerald-500/80 uppercase font-bold tracking-widest mb-1">Net Profit</div>
+                                <div class="text-lg font-black text-emerald-400" id="finProfit">₹0.00</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] text-emerald-500/80 uppercase font-bold tracking-widest mb-1">Margin</div>
+                                <div class="text-sm font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md inline-block" id="finMargin">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex gap-3">
+                        <button id="dispatchBtn" class="w-full glass-btn text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 text-sm shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+                            <i class="fa-solid fa-paper-plane"></i> Dispatch Driver
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        class Particle {
+            constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 2 + 0.5; this.speedY = (Math.random() * 0.5) + 0.1; this.speedX = (Math.random() * 0.4) - 0.2; this.opacity = Math.random() * 0.5 + 0.1; }
+            update() { this.y -= this.speedY; this.x += this.speedX; if (this.y < 0) this.y = canvas.height; if (this.x < 0 || this.x > canvas.width) this.speedX *= -1; }
+            draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = `rgba(139, 92, 246, ${this.opacity})`; ctx.fill(); }
+        }
+        for(let i=0; i<40; i++) particles.push(new Particle());
+        function animateCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animateCanvas); }
+        animateCanvas();
+
+        let routingMap = L.map('map', {zoomControl: false}).setView([23.0350, 72.5293], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }).addTo(routingMap);
+        let currentRouteLayer = L.featureGroup().addTo(routingMap);
+        
+        let globalRouteCoordinates = [];
+        let vehicleMarker = null;
+
+        const createIcon = (iconClass, colorClass) => L.divIcon({
+            html: `<div class="w-10 h-10 rounded-full bg-black/80 backdrop-blur-md flex items-center justify-center border border-${colorClass}/50 text-${colorClass} shadow-[0_0_15px_rgba(0,0,0,0.8)]"><i class="${iconClass} text-lg"></i></div>`,
+            className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+        });
+
+        const driverIcon = L.divIcon({
+            html: `<div class="w-10 h-10 rounded-full bg-violet-600 flex items-center justify-center border-2 border-white shadow-[0_0_15px_rgba(139,92,246,0.8)]"><i class="fa-solid fa-motorcycle text-white text-sm"></i></div>`,
+            className: '', iconSize: [40, 40], iconAnchor: [20, 20]
+        });
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const payloadStr = localStorage.getItem('dispatchPayload');
+            if(!payloadStr) { window.location.href = '/dashboard'; return; }
+            const payload = JSON.parse(payloadStr);
+            
+            document.getElementById('sumDist').innerText = `${payload.Distance} km`;
+            // 🟢 DYNAMIC STAR RATING GENERATOR 🟢
+            const rating = parseFloat(payload.Delivery_person_Ratings);
+            let starsHtml = '';
+            
+            for (let i = 1; i <= 5; i++) {
+                if (rating >= i) {
+                    starsHtml += '<i class="fa-solid fa-star"></i>'; // Full Star
+                } else if (rating >= i - 0.5) {
+                    starsHtml += '<i class="fa-solid fa-star-half-stroke"></i>'; // Half Star
+                } else {
+                    starsHtml += '<i class="fa-solid fa-star opacity-30"></i>'; // Empty Star (Dimmed)
+                }
+            }
+            
+            // Re-attach the numerical text at the end
+            starsHtml += `<span class="text-slate-400 ml-1" id="driverRatingVal">(${rating.toFixed(1)})</span>`;
+            
+            // Inject the calculated stars into the HTML container
+            document.getElementById('starContainer').innerHTML = starsHtml;
+            
+            // 🟢 NEW: DYNAMICALLY UPDATE THE MANIFEST & VEHICLE 🟢
+            document.getElementById('vehTypeDisplay').innerText = payload.Type_of_vehicle.trim().replace('_', ' ');
+            const dropCount = payload.multiple_deliveries > 0 ? ` (+${payload.multiple_deliveries} Drops)` : ' (Direct Drop)';
+            document.getElementById('manifestDisplay').innerText = `${payload.Type_of_order.trim()} Order${dropCount}`;
+
+            try {
+                const response = await fetch("/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                const data = await response.json();
+                
+                document.getElementById("mapOverlay").style.opacity = '0';
+                setTimeout(() => document.getElementById("mapOverlay").style.display = 'none', 500);
+                
+                const predictedTime = Math.round(data.prediction);
+                document.getElementById('statusText').innerHTML = `<i class="fa-solid fa-stopwatch text-emerald-400"></i> Final ETA Generated`;
+                document.getElementById("etaSubtitle").innerText = `Prediction confidence: 94.2%`;
+                
+                let etaResult = document.getElementById("etaResult");
+                etaResult.style.opacity = '1';
+                etaResult.classList.replace('text-transparent', 'text-white');
+                animateValue(etaResult, 0, predictedTime, 1500);
+
+                document.getElementById('sumTraffic').innerText = data.environment.traffic.trim();
+                document.getElementById('sumWeather').innerText = data.environment.weather.replace('conditions ', '').trim();
+
+                // Update Financial UI
+                if(data.financials) {
+                    document.getElementById('finRev').innerText = `₹${data.financials.revenue.toFixed(2)}`;
+                    document.getElementById('finCost').innerText = `₹${data.financials.cost.toFixed(2)}`;
+                    document.getElementById('finProfit').innerText = `₹${data.financials.profit.toFixed(2)}`;
+                    document.getElementById('finMargin').innerText = `${data.financials.margin}%`;
+                    
+                    if(data.financials.profit < 0) {
+                        document.getElementById('finProfit').classList.replace('text-emerald-400', 'text-rose-400');
+                        document.getElementById('finMargin').classList.replace('text-emerald-300', 'text-rose-300');
+                        document.getElementById('finMargin').classList.replace('bg-emerald-500/20', 'bg-rose-500/20');
+                    }
+                }
+
+                const newEntry = { orderId: Math.floor(1000 + Math.random() * 9000), vehicle: payload.Type_of_vehicle.trim().replace('_', ' '), distance: payload.Distance, eta: predictedTime };
+                let currentHistory = JSON.parse(localStorage.getItem('etaHistory') || '[]');
+                currentHistory.unshift(newEntry);
+                localStorage.setItem('etaHistory', JSON.stringify(currentHistory.slice(0, 10)));
+
+                if (data.route && data.route.restaurant && data.route.customers) {
+                    const rLat = data.route.restaurant[0];
+                    const rLng = data.route.restaurant[1];
+                    const customers = data.route.customers;
+
+                    L.marker([rLat, rLng], {icon: createIcon('fa-solid fa-store', 'slate-300')}).addTo(currentRouteLayer);
+                    
+                    customers.forEach((cust, index) => {
+                        let iconHtml = customers.length > 1 ? `<div class="w-8 h-8 rounded-full bg-black/80 flex items-center justify-center border border-violet-400/50 text-violet-400 font-bold text-xs">${index+1}</div>` : `<div class="w-10 h-10 rounded-full bg-black/80 flex items-center justify-center border border-violet-400/50 text-violet-400 shadow-md"><i class="fa-solid fa-location-dot"></i></div>`;
+                        L.marker([cust[0], cust[1]], { icon: L.divIcon({ html: iconHtml, className: '', iconSize: [40, 40], iconAnchor: [20, 20] }) }).addTo(currentRouteLayer);
+                    });
+
+                    // OSRM Multi-stop Routing
+                    let osrmCoords = `${rLng},${rLat}`;
+                    customers.forEach(cust => { osrmCoords += `;${cust[1]},${cust[0]}`; });
+                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`;
+
+                    try {
+                        const routeResponse = await fetch(osrmUrl);
+                        const routeData = await routeResponse.json();
+                        if (routeData.routes && routeData.routes.length > 0) {
+                            const coordinates = routeData.routes[0].geometry.coordinates;
+                            globalRouteCoordinates = coordinates.map(coord => [coord[1], coord[0]]);
+                            L.polyline(globalRouteCoordinates, { color: '#a78bfa', weight: 5, opacity: 0.8, lineJoin: 'round' }).addTo(currentRouteLayer);
+                        } else {
+                            throw new Error("No valid route found by OSRM");
+                        }
+                    } catch(err) {
+                        console.error("OSRM Failed, triggering visual fallback", err);
+                        
+                        globalRouteCoordinates = [];
+                        let prevPoint = [rLat, rLng];
+                        globalRouteCoordinates.push(prevPoint);
+
+                        customers.forEach(cust => {
+                            let nextPoint = [cust[0], cust[1]];
+                            for(let i = 1; i <= 30; i++) {
+                                let stepLat = prevPoint[0] + (nextPoint[0] - prevPoint[0]) * (i / 30);
+                                let stepLng = prevPoint[1] + (nextPoint[1] - prevPoint[1]) * (i / 30);
+                                globalRouteCoordinates.push([stepLat, stepLng]);
+                            }
+                            prevPoint = nextPoint;
+                        });
+
+                        L.polyline(globalRouteCoordinates, { color: '#a78bfa', weight: 5, opacity: 0.8, dashArray: '10, 10', lineJoin: 'round' }).addTo(currentRouteLayer);
+                    }
+                    
+                    routingMap.fitBounds(currentRouteLayer.getBounds(), {padding: [50, 50]});
+                }
+            } catch (error) {
+                document.getElementById("etaResult").innerText = "ERR";
+            }
+        });
+
+        // DRIVER ANIMATION
+        document.getElementById('dispatchBtn').addEventListener('click', function() {
+            if (globalRouteCoordinates.length === 0) return;
+            
+            this.innerHTML = '<i class="fa-solid fa-check"></i> Driver Dispatched';
+            this.classList.replace('glass-btn', 'bg-emerald-500/20');
+            this.style.borderColor = "rgba(16, 185, 129, 0.5)";
+            this.style.color = "#34d399";
+            this.disabled = true;
+
+            document.getElementById('status2block').classList.remove('opacity-50');
+            document.getElementById('status2dot').classList.replace('bg-slate-700', 'bg-violet-500');
+            document.getElementById('status2block').querySelector('p').innerText = "Out for Delivery";
+
+            document.getElementById('liveSpeed').innerText = "42 km/h";
+            document.getElementById('liveSpeed').classList.replace('text-white', 'text-emerald-400');
+            document.getElementById('speedCard').style.borderColor = "rgba(16, 185, 129, 0.3)";
+
+            vehicleMarker = L.marker(globalRouteCoordinates[0], {icon: driverIcon}).addTo(routingMap);
+            
+            let index = 0;
+            const speed = 100;
+
+            function moveMarker() {
+                if (index < globalRouteCoordinates.length) {
+                    vehicleMarker.setLatLng(globalRouteCoordinates[index]);
+                    index++;
+                    setTimeout(moveMarker, speed);
+                } else {
+                    document.getElementById('status2block').querySelector('p').innerText = "Delivery Completed";
+                    
+                    document.getElementById('liveSpeed').innerText = "0 km/h";
+                    document.getElementById('liveSpeed').classList.replace('text-emerald-400', 'text-white');
+                    document.getElementById('speedCard').style.borderColor = "rgba(255, 255, 255, 0.05)";
+                }
+            }
+            moveMarker();
+        });
+    </script>
+</body>
+</html>
