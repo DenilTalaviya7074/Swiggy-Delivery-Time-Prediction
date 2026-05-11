@@ -16,7 +16,7 @@ def test_staging_model_loaded():
     
     # THE FIX: Use the exact Registered Model Name from evaluation.py
     model_name = "delivery_time_model"
-    stage = "Staging"
+    stage = "Production"
     
     try:
         # 1. Verify the model actually exists in the Staging stage
