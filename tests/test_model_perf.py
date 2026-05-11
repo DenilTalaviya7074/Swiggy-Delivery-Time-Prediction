@@ -34,7 +34,7 @@ def test_model_performance():
 
     # 🚨 THE FIX: Stop reading from JSON, use the actual registered name
     model_name = "delivery_time_model"
-    stage = "Production"
+    stage = "Staging"
     model_path = f"models:/{model_name}/{stage}"
 
     # load model from registry
